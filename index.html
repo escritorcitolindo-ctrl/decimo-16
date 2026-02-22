@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Learning Flashcards - Expert Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #58cc02;
+            --secondary: #1cb0f6;
+            --accent: #ff4b4b;
+            --text: #4b4b4b;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: radial-gradient(circle, #ffffff, #e1f5fe);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #app-container {
+            width: 95%;
+            max-width: 600px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Flashcard Estilo Duolingo */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 450px;
+            margin: 20px auto;
+        }
+
+        .card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border-radius: 25px;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 25px;
+            border: 4px solid #e5e5e5;
+            background: white;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: var(--secondary);
+            color: white;
+            border-color: #1696d3;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .phrase-text {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 10px 0;
+            line-height: 1.2;
+        }
+
+        /* Botones */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-family: 'Fredoka One', cursive;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #46a302;
+            transition: all 0.2s;
+            margin-top: 20px;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #46a302;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            box-shadow: 0 5px 0 #999;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        /* Game Over Section */
+        #game-over {
+            display: none;
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            width: 80%;
+            margin: 15px 0;
+        }
+
+        .user-list {
+            text-align: left;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            border-top: 2px solid #eee;
+            padding-top: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e5e5e5;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="game-zone">
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        <div class="card-container">
+            <div class="card" id="main-card" onclick="handleFlip()">
+                <div class="card-face card-front">
+                    <img id="img-en" src="" alt="Real Image" class="card-image">
+                    <p class="phrase-text" id="text-en"></p>
+                    <span style="font-size: 30px;">🔊</span>
+                </div>
+                <div class="card-face card-back">
+                    <h2 style="font-size: 35px;">Traducción:</h2>
+                    <p class="phrase-text" id="text-es"></p>
+                    <span style="font-size: 30px;">🔊</span>
+                </div>
+            </div>
+        </div>
+        <button id="next-btn" class="btn" onclick="nextCard()" disabled>SIGUIENTE</button>
+    </div>
+
+    <div id="game-over">
+        <h1 style="color: var(--accent); font-size: 45px; font-family: 'Fredoka One';">GAME OVER</h1>
+        <p style="font-size: 20px;">¡Completaste todas las frases!</p>
+        <input type="text" id="user-name" placeholder="Escribe tu nombre aquí...">
+        <br>
+        <button class="btn" onclick="saveResult()">GUARDAR REGISTRO</button>
+        <div class="user-list" id="final-list">
+            <h3>Participantes:</h3>
+            <ul id="score-ul"></ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Vocabulario cargado con imágenes reales (Unsplash/Pexels IDs)
+    const vocabulary = [
+        { en: "I am studying hard to pass the exam", es: "Yo estudio duro para pasar el examen", img: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600" },
+        { en: "I agreed to go to the museum", es: "Yo estuve de acuerdo en ir al museo", img: "https://images.unsplash.com/photo-1554907984-15263bfd63bd?w=600" },
+        { en: "We decided to move to another city", es: "Nosotros decidimos mudarnos a otra ciudad", img: "https://images.unsplash.com/photo-1520038410233-7141be7e6f97?w=600" },
+        { en: "She promised to come to the party", es: "Ella prometió venir a la fiesta", img: "https://images.unsplash.com/photo-1530103043960-ef38714abb15?w=600" },
+        { en: "She would like to study", es: "A ella le gustaría estudiar", img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600" },
+        { en: "I would prefer to go out", es: "Yo preferiría salir", img: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600" },
+        { en: "He would love to travel to Europe", es: "A él le encantaría viajar a Europa", img: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600" },
+        { en: "We are happy to share the office with you", es: "Nosotros estamos felices de compartir la oficina contigo", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600" },
+        { en: "He is sad to quit the job", es: "Él está triste por renunciar al trabajo", img: "https://images.unsplash.com/photo-1516534775068-ba3e7458af70?w=600" },
+        { en: "I promised to get an A in Math", es: "Yo prometí sacar una A en Matemáticas", img: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600" },
+        { en: "We would love to travel to Japan", es: "A nosotros nos encantaría viajar a Japón", img: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600" },
+        { en: "I like to help you whenever I can", es: "Me gusta ayudarte cuando puedo", img: "https://images.unsplash.com/photo-1559027615-cd4451d131e2?w=600" },
+        { en: "He traveled to Canada to work", es: "Él viajó a Canadá para trabajar", img: "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=600" },
+        { en: "In the mountains", es: "En las montañas", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600" },
+        { en: "Don't forget to visit the city", es: "No olvides visitar la ciudad", img: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=600" },
+        { en: "I have to look for a new job", es: "Yo tengo que buscar un nuevo trabajo", img: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=600" },
+        { en: "He wants to buy a new cellphone", es: "Él quiere comprar un nuevo celular", img: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600" },
+        { en: "You should try to participate in the contest", es: "Tú deberías intentar participar en el concurso", img: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=600" },
+        { en: "Reading is my favorite spare time activity", es: "Leer es mi actividad favorita de tiempo libre", img: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600" },
+        { en: "Do you imagine winning the lottery?", es: "¿Te imaginas ganando la lotería?", img: "https://images.unsplash.com/photo-1518458028785-8fbcd101ebb9?w=600" },
+        { en: "Doctors suggest walking 30 minutes a day", es: "Los doctores sugieren caminar 30 minutos al día", img: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=600" },
+        { en: "He must continue working on the project", es: "Él debe continuar trabajando en el proyecto", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600" },
+        { en: "I am looking forward to traveling abroad", es: "Yo estoy ansioso por viajar al extranjero", img: "https://images.unsplash.com/photo-1500835595353-b042ad575b51?w=600" },
+        { en: "My sister is really good at drawing", es: "Mi hermana es realmente buena dibujando", img: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600" },
+        { en: "My brother is bad at playing tennis", es: "Mi hermano es malo jugando tenis", img: "https://images.unsplash.com/photo-1595435066319-70577eaa8d17?w=600" },
+        { en: "I love dancing salsa", es: "Yo amo bailar salsa", img: "https://images.unsplash.com/photo-1524117074681-31bd4bb22ad3?w=600" },
+        { en: "We like practicing extreme sports", es: "A nosotros nos gusta practicar deportes extremos", img: "https://images.unsplash.com/photo-1521464302461-63826a0ae8c2?w=600" },
+        { en: "They prefer playing soccer than basketball", es: "Ellos prefieren jugar fútbol que baloncesto", img: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600" },
+        { en: "I love watching movies", es: "Yo amo ver películas", img: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600" },
+        { en: "I am very good at dancing", es: "Yo soy muy bueno bailando", img: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600" },
+        { en: "They avoid driving during the rush hour", es: "Ellos evitan conducir durante la hora pico", img: "https://images.unsplash.com/photo-1543424744-8e0c3abfee5d?w=600" },
+        { en: "I think meeting new people is interesting", es: "Creo que conocer gente nueva es interesante", img: "https://images.unsplash.com/photo-1521791136364-798a7bc0d262?w=600" },
+        { en: "I hate feeling anxious", es: "Yo odio sentirme ansioso", img: "https://images.unsplash.com/photo-1518550687729-81921c3bb71b?w=600" },
+        { en: "The teacher suggests memorizing the irregular verbs", es: "El profesor sugiere memorizar los verbos irregulares", img: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600" },
+        { en: "She goes running to the park every day", es: "Ella va a correr al parque todos los días", img: "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=600" },
+        { en: "Avoid eating junk food", es: "Evita comer comida chatarra", img: "https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=600" }
+    ];
+
+    let currentIndex = 0;
+    let flippedCurrent = false;
+
+    const synth = window.speechSynthesis;
+
+    function initCard() {
+        const item = vocabulary[currentIndex];
+        document.getElementById('text-en').innerText = item.en;
+        document.getElementById('text-es').innerText = item.es;
+        document.getElementById('img-en').src = item.img;
+        document.getElementById('main-card').classList.remove('flipped');
+        document.getElementById('next-btn').disabled = true;
+        flippedCurrent = false;
+        
+        updateProgress();
+        speak(item.en, 'en-US');
+    }
+
+    function handleFlip() {
+        const card = document.getElementById('main-card');
+        card.classList.toggle('flipped');
+        
+        flippedCurrent = true;
+        document.getElementById('next-btn').disabled = false;
+
+        const item = vocabulary[currentIndex];
+        if(card.classList.contains('flipped')) {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            speak(item.es, 'es-MX');
+        } else {
+            speak(item.en, 'en-US');
+        }
+    }
+
+    function speak(text, lang) {
+        synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = lang;
+        utter.rate = 0.9;
+        utter.pitch = 1.1; // Voz más amigable para niños
+        synth.speak(utter);
+    }
+
+    function nextCard() {
+        currentIndex++;
+        if (currentIndex < vocabulary.length) {
+            initCard();
+        } else {
+            showGameOver();
+        }
+    }
+
+    function updateProgress() {
+        const percent = ((currentIndex) / vocabulary.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showGameOver() {
+        document.getElementById('game-zone').style.display = 'none';
+        document.getElementById('game-over').style.display = 'block';
+        renderScores();
+    }
+
+    function saveResult() {
+        const name = document.getElementById('user-name').value;
+        if (!name) return alert("Por favor ingresa tu nombre");
+        
+        const history = JSON.parse(localStorage.getItem('flashcard_history') || '[]');
+        history.push({ name: name, date: new Date().toLocaleDateString() });
+        localStorage.setItem('flashcard_history', JSON.stringify(history));
+        
+        document.getElementById('user-name').value = '';
+        renderScores();
+    }
+
+    function renderScores() {
+        const history = JSON.parse(localStorage.getItem('flashcard_history') || '[]');
+        const ul = document.getElementById('score-ul');
+        ul.innerHTML = '';
+        history.reverse().forEach(entry => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${entry.name}</strong> - Completado el ${entry.date} ✅`;
+            ul.appendChild(li);
+        });
+    }
+
+    // Iniciar al cargar
+    window.onload = initCard;
+</script>
+
+</body>
+</html>
